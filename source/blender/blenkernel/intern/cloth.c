@@ -58,6 +58,8 @@ static void cloth_to_object (Object *ob,  ClothModifierData *clmd, float (*verte
 static void cloth_from_mesh ( ClothModifierData *clmd, DerivedMesh *dm );
 static int cloth_from_object(Object *ob, ClothModifierData *clmd, DerivedMesh *dm, float framenr, int first);
 static void cloth_update_springs( ClothModifierData *clmd );
+static void cloth_update_verts( Object *ob, ClothModifierData *clmd, DerivedMesh *dm );
+static void cloth_update_spring_lengths( ClothModifierData *clmd );
 static int cloth_build_springs ( ClothModifierData *clmd, DerivedMesh *dm );
 static void cloth_apply_vgroup ( ClothModifierData *clmd, DerivedMesh *dm );
 
@@ -368,7 +370,9 @@ static int do_step_cloth(Object *ob, ClothModifierData *clmd, DerivedMesh *resul
 	effectors = pdInitEffectors(clmd->scene, ob, NULL, clmd->sim_parms->effector_weights, true);
 
 	/* Support for dynamic vertex groups, changing from frame to frame */
+	cloth_update_verts ( ob, clmd, result );
 	cloth_apply_vgroup ( clmd, result );
+	cloth_update_spring_lengths ( clmd );
 	cloth_update_springs( clmd );
 	
 	// TIMEIT_START(cloth_step)
@@ -1152,6 +1156,41 @@ static void cloth_update_springs( ClothModifierData *clmd )
 	}
 	
 	cloth_hair_update_bending_targets(clmd);
+}
+
+/* Update rest verts, for dynamically deformable cloth */
+static void cloth_update_verts( Object *ob, ClothModifierData *clmd, DerivedMesh *dm )
+{
+	int i = 0;
+	MVert *mvert = dm->getVertArray (dm);
+	ClothVertex *verts = clmd->clothObject->verts;
+
+	for ( i = 0; i < dm->getNumVerts(dm); i++, verts++ ) {
+		verts->xrest = mvert[i].co;
+		mul_m4_v3(ob->obmat, verts->xrest);
+	}
+}
+
+/* Update spring rest lenght, for dynamically deformable cloth */
+static void cloth_update_spring_lengths( ClothModifierData *clmd )
+{
+	Cloth *cloth = clmd->clothObject;
+	LinkNode *search = cloth->springs;
+	float shrink_factor;
+
+	while (search) {
+		ClothSpring *spring = search->link;
+
+		if ( spring->type != CLOTH_SPRING_TYPE_SEWING ) {
+			if (clmd->sim_parms->vgroup_shrink > 0)
+				shrink_factor = 1.0f - ((cloth->verts[spring->ij].shrink_factor + cloth->verts[spring->kl].shrink_factor) / 2.0f);
+			else
+				shrink_factor = 1.0f - clmd->sim_parms->shrink_min;
+			spring->restlen = len_v3v3(cloth->verts[spring->kl].xrest, cloth->verts[spring->ij].xrest) * shrink_factor;
+		}
+
+		search = search->next;
+	}
 }
 
 BLI_INLINE void cross_identity_v3(float r[3][3], const float v[3])
