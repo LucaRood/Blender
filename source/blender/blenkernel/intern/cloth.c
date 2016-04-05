@@ -369,10 +369,15 @@ static int do_step_cloth(Object *ob, ClothModifierData *clmd, DerivedMesh *resul
 
 	effectors = pdInitEffectors(clmd->scene, ob, NULL, clmd->sim_parms->effector_weights, true);
 
+	if (clmd->sim_parms->flags & CLOTH_SIMSETTINGS_FLAG_DYNAMIC_BASEMESH )
+		cloth_update_verts ( ob, clmd, result );
+
 	/* Support for dynamic vertex groups, changing from frame to frame */
-	cloth_update_verts ( ob, clmd, result );
 	cloth_apply_vgroup ( clmd, result );
-	cloth_update_spring_lengths ( clmd );
+
+	if (clmd->sim_parms->flags & CLOTH_SIMSETTINGS_FLAG_DYNAMIC_BASEMESH )
+		cloth_update_spring_lengths ( clmd );
+
 	cloth_update_springs( clmd );
 	
 	// TIMEIT_START(cloth_step)
