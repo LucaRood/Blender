@@ -59,7 +59,7 @@ static void cloth_from_mesh ( ClothModifierData *clmd, DerivedMesh *dm );
 static int cloth_from_object(Object *ob, ClothModifierData *clmd, DerivedMesh *dm, float framenr, int first);
 static void cloth_update_springs( ClothModifierData *clmd );
 static void cloth_update_verts( Object *ob, ClothModifierData *clmd, DerivedMesh *dm );
-static void cloth_update_spring_lengths( ClothModifierData *clmd );
+static void cloth_update_spring_lengths( ClothModifierData *clmd, DerivedMesh *dm );
 static int cloth_build_springs ( ClothModifierData *clmd, DerivedMesh *dm );
 static void cloth_apply_vgroup ( ClothModifierData *clmd, DerivedMesh *dm );
 
@@ -376,7 +376,7 @@ static int do_step_cloth(Object *ob, ClothModifierData *clmd, DerivedMesh *resul
 	cloth_apply_vgroup ( clmd, result );
 
 	if (clmd->sim_parms->flags & CLOTH_SIMSETTINGS_FLAG_DYNAMIC_BASEMESH )
-		cloth_update_spring_lengths ( clmd );
+		cloth_update_spring_lengths ( clmd, result );
 
 	cloth_update_springs( clmd );
 	
@@ -1166,7 +1166,7 @@ static void cloth_update_springs( ClothModifierData *clmd )
 /* Update rest verts, for dynamically deformable cloth */
 static void cloth_update_verts( Object *ob, ClothModifierData *clmd, DerivedMesh *dm )
 {
-	int i = 0;
+	unsigned int i = 0;
 	MVert *mvert = dm->getVertArray (dm);
 	ClothVertex *verts = clmd->clothObject->verts;
 
@@ -1177,11 +1177,21 @@ static void cloth_update_verts( Object *ob, ClothModifierData *clmd, DerivedMesh
 }
 
 /* Update spring rest lenght, for dynamically deformable cloth */
-static void cloth_update_spring_lengths( ClothModifierData *clmd )
+static void cloth_update_spring_lengths( ClothModifierData *clmd, DerivedMesh *dm )
 {
 	Cloth *cloth = clmd->clothObject;
 	LinkNode *search = cloth->springs;
+	unsigned int struct_springs = 0;
+	unsigned int i = 0;
+	unsigned int mvert_num = (unsigned int)dm->getNumVerts(dm);
 	float shrink_factor;
+
+	clmd->sim_parms->avg_spring_len = 0.0f;
+
+	for (i = 0; i < mvert_num; i++) {
+		cloth->verts[i].avg_spring_len = 0.0f;
+		cloth->verts[i].spring_count = 0;
+	}
 
 	while (search) {
 		ClothSpring *spring = search->link;
@@ -1194,7 +1204,23 @@ static void cloth_update_spring_lengths( ClothModifierData *clmd )
 			spring->restlen = len_v3v3(cloth->verts[spring->kl].xrest, cloth->verts[spring->ij].xrest) * shrink_factor;
 		}
 
+		if ( spring->type == CLOTH_SPRING_TYPE_SEWING || spring->type == CLOTH_SPRING_TYPE_STRUCTURAL ) {
+			clmd->sim_parms->avg_spring_len += spring->restlen;
+			cloth->verts[spring->ij].avg_spring_len += spring->restlen;
+			cloth->verts[spring->kl].avg_spring_len += spring->restlen;
+			cloth->verts[spring->ij].spring_count++;
+			cloth->verts[spring->kl].spring_count++;
+			struct_springs++;
+		}
+
 		search = search->next;
+	}
+
+	if (struct_springs > 0)
+		clmd->sim_parms->avg_spring_len /= struct_springs;
+
+	for (i = 0; i < mvert_num; i++) {
+		cloth->verts[i].avg_spring_len = cloth->verts[i].avg_spring_len * 0.49f / ((float)cloth->verts[i].spring_count);
 	}
 }
 
