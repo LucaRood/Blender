@@ -1190,7 +1190,6 @@ static void cloth_update_spring_lengths( ClothModifierData *clmd, DerivedMesh *d
 
 	for (i = 0; i < mvert_num; i++) {
 		cloth->verts[i].avg_spring_len = 0.0f;
-		cloth->verts[i].spring_count = 0;
 	}
 
 	while (search) {
@@ -1204,12 +1203,10 @@ static void cloth_update_spring_lengths( ClothModifierData *clmd, DerivedMesh *d
 			spring->restlen = len_v3v3(cloth->verts[spring->kl].xrest, cloth->verts[spring->ij].xrest) * shrink_factor;
 		}
 
-		if ( spring->type == CLOTH_SPRING_TYPE_SEWING || spring->type == CLOTH_SPRING_TYPE_STRUCTURAL ) {
+		if ( spring->type == CLOTH_SPRING_TYPE_STRUCTURAL ) {
 			clmd->sim_parms->avg_spring_len += spring->restlen;
 			cloth->verts[spring->ij].avg_spring_len += spring->restlen;
 			cloth->verts[spring->kl].avg_spring_len += spring->restlen;
-			cloth->verts[spring->ij].spring_count++;
-			cloth->verts[spring->kl].spring_count++;
 			struct_springs++;
 		}
 
