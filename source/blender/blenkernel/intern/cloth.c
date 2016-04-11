@@ -531,6 +531,7 @@ void cloth_free_modifier(ClothModifierData *clmd )
 
 		cloth->springs = NULL;
 		cloth->numsprings = 0;
+		cloth->numstructs = 0;
 
 		// free BVH collision tree
 		if ( cloth->bvhtree )
@@ -597,6 +598,7 @@ void cloth_free_modifier_extern(ClothModifierData *clmd )
 
 		cloth->springs = NULL;
 		cloth->numsprings = 0;
+		cloth->numstructs = 0;
 
 		// free BVH collision tree
 		if ( cloth->bvhtree )
@@ -788,6 +790,7 @@ static int cloth_from_object(Object *ob, ClothModifierData *clmd, DerivedMesh *d
 	// create springs
 	clmd->clothObject->springs = NULL;
 	clmd->clothObject->numsprings = -1;
+	clmd->clothObject->numstructs = -1;
 
 	if ( clmd->sim_parms->shapekey_rest && !(clmd->sim_parms->flags & CLOTH_SIMSETTINGS_FLAG_DYNAMIC_BASEMESH ) )
 		shapekey_rest = dm->getVertDataArray ( dm, CD_CLOTH_ORCO );
@@ -940,6 +943,9 @@ int cloth_add_spring(ClothModifierData *clmd, unsigned int indexA, unsigned int 
 		spring->stiffness = 0;
 		
 		cloth->numsprings++;
+		
+		if ( spring_type == CLOTH_SPRING_TYPE_STRUCTURAL || spring_type == CLOTH_SPRING_TYPE_SEWING )
+			cloth->numstructs++;
 	
 		BLI_linklist_prepend ( &cloth->springs, spring );
 		
@@ -1181,7 +1187,6 @@ static void cloth_update_spring_lengths( ClothModifierData *clmd, DerivedMesh *d
 {
 	Cloth *cloth = clmd->clothObject;
 	LinkNode *search = cloth->springs;
-	unsigned int struct_springs = 0;
 	unsigned int i = 0;
 	unsigned int mvert_num = (unsigned int)dm->getNumVerts(dm);
 	float shrink_factor;
@@ -1207,14 +1212,13 @@ static void cloth_update_spring_lengths( ClothModifierData *clmd, DerivedMesh *d
 			clmd->sim_parms->avg_spring_len += spring->restlen;
 			cloth->verts[spring->ij].avg_spring_len += spring->restlen;
 			cloth->verts[spring->kl].avg_spring_len += spring->restlen;
-			struct_springs++;
 		}
 
 		search = search->next;
 	}
 
-	if (struct_springs > 0)
-		clmd->sim_parms->avg_spring_len /= struct_springs;
+	if (cloth->numstructs > 0)
+		clmd->sim_parms->avg_spring_len /= cloth->numstructs;
 
 	for (i = 0; i < mvert_num; i++) {
 		cloth->verts[i].avg_spring_len = cloth->verts[i].avg_spring_len * 0.49f / ((float)cloth->verts[i].spring_count);
@@ -1501,6 +1505,7 @@ static int cloth_build_springs ( ClothModifierData *clmd, DerivedMesh *dm )
 	
 	
 	cloth->numsprings = struct_springs + shear_springs + bend_springs;
+	cloth->numstructs = struct_springs;
 	
 	cloth_free_edgelist(edgelist, mvert_num);
 
