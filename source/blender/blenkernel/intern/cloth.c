@@ -58,6 +58,7 @@ static void cloth_to_object (Object *ob,  ClothModifierData *clmd, float (*verte
 static void cloth_from_mesh ( ClothModifierData *clmd, DerivedMesh *dm );
 static int cloth_from_object(Object *ob, ClothModifierData *clmd, DerivedMesh *dm, float framenr, int first);
 static void cloth_update_springs( ClothModifierData *clmd );
+static void cloth_update_verts( Object *ob, ClothModifierData *clmd, DerivedMesh *dm );
 static void cloth_update_spring_lengths( ClothModifierData *clmd, DerivedMesh *dm );
 static int cloth_build_springs ( ClothModifierData *clmd, DerivedMesh *dm );
 static void cloth_apply_vgroup ( ClothModifierData *clmd, DerivedMesh *dm );
@@ -368,10 +369,13 @@ static int do_step_cloth(Object *ob, ClothModifierData *clmd, DerivedMesh *resul
 
 	effectors = pdInitEffectors(clmd->scene, ob, NULL, clmd->sim_parms->effector_weights, true);
 
+	if (clmd->sim_parms->flags & CLOTH_SIMSETTINGS_FLAG_DYNAMIC_BASEMESH )
+		cloth_update_verts ( ob, clmd, result );
+
 	/* Support for dynamic vertex groups, changing from frame to frame */
 	cloth_apply_vgroup ( clmd, result );
 
-	if ( clmd->sim_parms->flags & CLOTH_SIMSETTINGS_FLAG_SEW )
+	if ( clmd->sim_parms->flags & (CLOTH_SIMSETTINGS_FLAG_SEW | CLOTH_SIMSETTINGS_FLAG_DYNAMIC_BASEMESH) )
 		cloth_update_spring_lengths ( clmd, result );
 
 	cloth_update_springs( clmd );
@@ -527,6 +531,7 @@ void cloth_free_modifier(ClothModifierData *clmd )
 
 		cloth->springs = NULL;
 		cloth->numsprings = 0;
+		cloth->numstructs = 0;
 
 		// free BVH collision tree
 		if ( cloth->bvhtree )
@@ -593,6 +598,7 @@ void cloth_free_modifier_extern(ClothModifierData *clmd )
 
 		cloth->springs = NULL;
 		cloth->numsprings = 0;
+		cloth->numstructs = 0;
 
 		// free BVH collision tree
 		if ( cloth->bvhtree )
@@ -803,8 +809,9 @@ static int cloth_from_object(Object *ob, ClothModifierData *clmd, DerivedMesh *d
 	// create springs
 	clmd->clothObject->springs = NULL;
 	clmd->clothObject->numsprings = -1;
+	clmd->clothObject->numstructs = -1;
 
-	if ( clmd->sim_parms->shapekey_rest )
+	if ( clmd->sim_parms->shapekey_rest && !(clmd->sim_parms->flags & CLOTH_SIMSETTINGS_FLAG_DYNAMIC_BASEMESH ) )
 		shapekey_rest = dm->getVertDataArray ( dm, CD_CLOTH_ORCO );
 
 	mvert = dm->getVertArray (dm);
@@ -957,6 +964,9 @@ int cloth_add_spring(ClothModifierData *clmd, unsigned int indexA, unsigned int 
 		spring->stiffness = 0;
 		
 		cloth->numsprings++;
+		
+		if ( spring_type == CLOTH_SPRING_TYPE_STRUCTURAL )
+			cloth->numstructs++;
 	
 		BLI_linklist_prepend ( &cloth->springs, spring );
 		
@@ -1180,12 +1190,24 @@ static void cloth_update_springs( ClothModifierData *clmd )
 	cloth_hair_update_bending_targets(clmd);
 }
 
+/* Update rest verts, for dynamically deformable cloth */
+static void cloth_update_verts( Object *ob, ClothModifierData *clmd, DerivedMesh *dm )
+{
+	unsigned int i = 0;
+	MVert *mvert = dm->getVertArray (dm);
+	ClothVertex *verts = clmd->clothObject->verts;
+
+	for ( i = 0; i < dm->getNumVerts(dm); i++, verts++ ) {
+		copy_v3_v3(verts->xrest, mvert[i].co);
+		mul_m4_v3(ob->obmat, verts->xrest);
+	}
+}
+
 /* Update spring rest lenght, for dynamically deformable cloth */
 static void cloth_update_spring_lengths( ClothModifierData *clmd, DerivedMesh *dm )
 {
 	Cloth *cloth = clmd->clothObject;
 	LinkNode *search = cloth->springs;
-	unsigned int struct_springs = 0;
 	unsigned int i = 0;
 	unsigned int mvert_num = (unsigned int)dm->getNumVerts(dm);
 	float shrink_factor;
@@ -1212,14 +1234,13 @@ static void cloth_update_spring_lengths( ClothModifierData *clmd, DerivedMesh *d
 			clmd->sim_parms->avg_spring_len += spring->restlen;
 			cloth->verts[spring->ij].avg_spring_len += spring->restlen;
 			cloth->verts[spring->kl].avg_spring_len += spring->restlen;
-			struct_springs++;
 		}
 
 		search = search->next;
 	}
 
-	if (struct_springs > 0)
-		clmd->sim_parms->avg_spring_len /= struct_springs;
+	if (cloth->numstructs > 0)
+		clmd->sim_parms->avg_spring_len /= cloth->numstructs;
 
 	for (i = 0; i < mvert_num; i++) {
 		if (cloth->verts[i].spring_count > 0)
@@ -1506,6 +1527,7 @@ static int cloth_build_springs ( ClothModifierData *clmd, DerivedMesh *dm )
 	
 	
 	cloth->numsprings = struct_springs + shear_springs + bend_springs;
+	cloth->numstructs = struct_springs_real;
 	
 	cloth_free_edgelist(edgelist, mvert_num);
 

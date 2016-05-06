@@ -87,6 +87,7 @@ typedef struct Cloth {
 	struct ClothVertex	*verts;			/* The vertices that represent this cloth. */
 	struct	LinkNode	*springs;		/* The springs connecting the mesh. */
 	unsigned int		numsprings;		/* The count of springs. */
+	unsigned int		numstructs;		/* The count of structural springs */
 	unsigned int		mvert_num;		/* The number of verts == m * n. */
 	unsigned int		tri_num;
 	unsigned char 		old_solver_type;	/* unused, only 1 solver here */
@@ -171,6 +172,7 @@ typedef enum {
 	CLOTH_SIMSETTINGS_FLAG_CCACHE_EDIT = (1 << 12),	/* edit cache in editmode */
 	CLOTH_SIMSETTINGS_FLAG_NO_SPRING_COMPRESS = (1 << 13), /* don't allow spring compression */
 	CLOTH_SIMSETTINGS_FLAG_SEW = (1 << 14), /* pull ends of loose edges together */
+	CLOTH_SIMSETTINGS_FLAG_DYNAMIC_BASEMESH = (1 << 15), /* make simulation respect deformations in the base object */
 } CLOTH_SIMSETTINGS_FLAGS;
 
 /* COLLISION FLAGS */

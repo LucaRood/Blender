@@ -103,11 +103,13 @@ class PHYSICS_PT_cloth(PhysicButtonsPanel, Panel):
             col.prop(cloth, "goal_friction", text="Friction")
         """
 
+        col.prop(cloth, "dynamic_base_mesh")
+
         key = ob.data.shape_keys
 
-        if key:
-            col.label(text="Rest Shape Key:")
-            col.prop_search(cloth, "rest_shape_key", key, "key_blocks", text="")
+        if key and not cloth.dynamic_base_mesh:
+            row = layout.row()
+            row.prop_search(cloth, "rest_shape_key", key, "key_blocks")
 
 
 class PHYSICS_PT_cloth_cache(PhysicButtonsPanel, Panel):
