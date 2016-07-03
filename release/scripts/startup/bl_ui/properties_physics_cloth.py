@@ -72,7 +72,7 @@ class PHYSICS_PT_cloth(PhysicButtonsPanel, Panel):
         sub.operator("cloth.preset_add", text="", icon='ZOOMOUT').remove_active = True
 
         col.label(text="Quality:")
-        col.prop(cloth, "quality", text="Steps", slider=True)
+        col.prop(cloth, "quality", text="Steps")
 
         col.label(text="Material:")
         col.prop(cloth, "mass")
@@ -141,7 +141,7 @@ class PHYSICS_PT_cloth_collision(PhysicButtonsPanel, Panel):
         split = layout.split()
 
         col = split.column()
-        col.prop(cloth, "collision_quality", slider=True, text="Quality")
+        col.prop(cloth, "collision_quality", text="Quality")
         col.prop(cloth, "distance_min", slider=True, text="Distance")
         col.prop(cloth, "repel_force", slider=True, text="Repel")
         col.prop(cloth, "distance_repel", slider=True, text="Repel Distance")
@@ -151,7 +151,7 @@ class PHYSICS_PT_cloth_collision(PhysicButtonsPanel, Panel):
         col.prop(cloth, "use_self_collision", text="Self Collision")
         sub = col.column()
         sub.active = cloth.use_self_collision
-        sub.prop(cloth, "self_collision_quality", slider=True, text="Quality")
+        sub.prop(cloth, "self_collision_quality", text="Quality")
         sub.prop(cloth, "self_distance_min", slider=True, text="Distance")
         sub.prop_search(cloth, "vertex_group_self_collisions", ob, "vertex_groups", text="")
 
