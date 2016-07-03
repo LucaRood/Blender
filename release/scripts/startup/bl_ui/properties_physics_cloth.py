@@ -59,20 +59,24 @@ class PHYSICS_PT_cloth(PhysicButtonsPanel, Panel):
         ob = context.object
         cloth = md.settings
 
-        split = layout.split()
+        layout.active = cloth_panel_enabled(md)
 
-        split.active = cloth_panel_enabled(md)
+        split = layout.split(percentage=0.25)
 
-        col = split.column()
-
-        col.label(text="Presets:")
-        sub = col.row(align=True)
+        split.label(text="Presets:")
+        sub = split.row(align=True)
         sub.menu("CLOTH_MT_presets", text=bpy.types.CLOTH_MT_presets.bl_label)
         sub.operator("cloth.preset_add", text="", icon='ZOOMIN')
         sub.operator("cloth.preset_add", text="", icon='ZOOMOUT').remove_active = True
 
-        col.label(text="Quality:")
-        col.prop(cloth, "quality", text="Steps")
+        split = layout.split(percentage=0.25)
+
+        split.label(text="Quality:")
+        split.prop(cloth, "quality", text="Steps")
+
+        split = layout.split()
+
+        col = split.column()
 
         col.label(text="Material:")
         col.prop(cloth, "mass")
@@ -86,8 +90,10 @@ class PHYSICS_PT_cloth(PhysicButtonsPanel, Panel):
         col.prop(cloth, "air_damping", text="Air")
         col.prop(cloth, "vel_damping", text="Velocity")
 
-        col.prop(cloth, "use_pin_cloth", text="Pinning")
-        sub = col.column()
+        col = layout.column()
+
+        col.prop(cloth, "use_pin_cloth", text="Pinning:")
+        sub = col.row()
         sub.active = cloth.use_pin_cloth
         sub.prop_search(cloth, "vertex_group_mass", ob, "vertex_groups", text="")
         sub.prop(cloth, "pin_stiffness", text="Stiffness")
@@ -106,8 +112,9 @@ class PHYSICS_PT_cloth(PhysicButtonsPanel, Panel):
         key = ob.data.shape_keys
 
         if key:
-            col.label(text="Rest Shape Key:")
-            col.prop_search(cloth, "rest_shape_key", key, "key_blocks", text="")
+            split = layout.split(percentage=0.4)
+            split.label(text="Rest Shape Key:")
+            split.prop_search(cloth, "rest_shape_key", key, "key_blocks", text="")
 
 
 class PHYSICS_PT_cloth_cache(PhysicButtonsPanel, Panel):
