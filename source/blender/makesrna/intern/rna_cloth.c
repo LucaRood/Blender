@@ -444,8 +444,8 @@ static void rna_def_cloth_sim_settings(BlenderRNA *brna)
 	
 	prop = RNA_def_property(srna, "time_multiplier", PROP_FLOAT, PROP_NONE);
 	RNA_def_property_float_sdna(prop, NULL, "time_multiplier");
-	RNA_def_property_range(prop, 0.001f, 1000);
-	RNA_def_property_ui_range(prop, 0.1f, 10, 10, 3);
+	RNA_def_property_range(prop, 0.0f, FLT_MAX);
+	RNA_def_property_ui_range(prop, 0.0f, 10.0f, 10, 3);
 	RNA_def_property_ui_text(prop, "Speed", "Cloth speed is multiplied by this value");
 	RNA_def_property_update(prop, 0, "rna_cloth_update");
 
