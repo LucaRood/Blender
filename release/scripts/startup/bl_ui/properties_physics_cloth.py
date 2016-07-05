@@ -95,10 +95,12 @@ class PHYSICS_PT_cloth(PhysicButtonsPanel, Panel):
         col.prop(cloth, "air_damping", text="Air")
         col.prop(cloth, "vel_damping", text="Velocity")
 
-        col = layout.column()
+        split = layout.split()
+
+        col = split.column()
 
         col.prop(cloth, "use_pin_cloth", text="Pinning:")
-        sub = col.row()
+        sub = col.column()
         sub.active = cloth.use_pin_cloth
         sub.prop_search(cloth, "vertex_group_mass", ob, "vertex_groups", text="")
         sub.prop(cloth, "pin_stiffness", text="Stiffness")
@@ -117,9 +119,9 @@ class PHYSICS_PT_cloth(PhysicButtonsPanel, Panel):
         key = ob.data.shape_keys
 
         if key:
-            split = layout.split(percentage=0.4)
-            split.label(text="Rest Shape Key:")
-            split.prop_search(cloth, "rest_shape_key", key, "key_blocks", text="")
+            col = split.column()
+            col.label(text="Rest Shape Key:")
+            col.prop_search(cloth, "rest_shape_key", key, "key_blocks", text="")
 
 
 class PHYSICS_PT_cloth_cache(PhysicButtonsPanel, Panel):
