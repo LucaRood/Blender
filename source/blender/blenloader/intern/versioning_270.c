@@ -1231,5 +1231,18 @@ void blo_do_versions_270(FileData *fd, Library *UNUSED(lib), Main *main)
 				br->flag |= BRUSH_ACCUMULATE;
 			}
 		}
+
+		if (!DNA_struct_elem_find(fd->filesdna, "ClothSimSettings", "float", "time_multiplier")) {
+			Object *ob;
+			ModifierData *md;
+			for (ob = main->object.first; ob; ob = ob->id.next) {
+				for (md = ob->modifiers.first; md; md = md->next) {
+					if (md->type == eModifierType_Cloth) {
+						ClothModifierData *clmd = (ClothModifierData *)md;
+						clmd->sim_parms->time_multiplier = 1.0f;
+					}
+				}
+			}
+		}
 	}
 }
