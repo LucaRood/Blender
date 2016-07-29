@@ -118,13 +118,13 @@ class PHYSICS_PT_cloth(PhysicButtonsPanel, Panel):
 
         col = split.column()
 
-        col.prop(cloth, "dynamic_base_mesh", text="Dynamic Mesh")
+        col.prop(cloth, "use_dynamic_mesh", text="Dynamic Mesh")
 
         key = ob.data.shape_keys
 
         if key:
             sub = col.column()
-            sub.active = not cloth.dynamic_base_mesh
+            sub.active = not cloth.use_dynamic_mesh
             sub.label(text="Rest Shape Key:")
             sub.prop_search(cloth, "rest_shape_key", key, "key_blocks", text="")
 

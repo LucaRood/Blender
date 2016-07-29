@@ -565,7 +565,7 @@ static void rna_def_cloth_sim_settings(BlenderRNA *brna)
 	RNA_def_property_ui_text(prop, "Rest Shape Key", "Shape key to use the rest spring lengths from");
 	RNA_def_property_update(prop, 0, "rna_cloth_update");
 
-	prop = RNA_def_property(srna, "dynamic_base_mesh", PROP_BOOLEAN, PROP_NONE);
+	prop = RNA_def_property(srna, "use_dynamic_mesh", PROP_BOOLEAN, PROP_NONE);
 	RNA_def_property_boolean_sdna(prop, NULL, "flags", CLOTH_SIMSETTINGS_FLAG_DYNAMIC_BASEMESH);
 	RNA_def_property_ui_text(prop, "Dynamic Base Mesh", "Make simulation respect deformations in the base mesh");
 	RNA_def_property_update(prop, 0, "rna_cloth_update");
