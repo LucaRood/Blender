@@ -1192,6 +1192,7 @@ static void cloth_update_verts( Object *ob, ClothModifierData *clmd, DerivedMesh
 	MVert *mvert = dm->getVertArray (dm);
 	ClothVertex *verts = clmd->clothObject->verts;
 
+	/* vertex count is already ensured to match */
 	for ( i = 0; i < dm->getNumVerts(dm); i++, verts++ ) {
 		copy_v3_v3(verts->xrest, mvert[i].co);
 		mul_m4_v3(ob->obmat, verts->xrest);
