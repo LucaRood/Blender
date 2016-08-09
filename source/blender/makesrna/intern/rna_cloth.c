@@ -284,6 +284,45 @@ static char *rna_ClothCollisionSettings_path(PointerRNA *ptr)
 	}
 }
 
+static void rna_ClothCollisionSettings_friction_set(struct PointerRNA *ptr, float value)
+{
+	ClothCollSettings *settings = (ClothCollSettings *)ptr->data;
+
+	settings->friction = value;
+
+	/* check for max clipping */
+	if (value > settings->max_frict)
+		settings->max_frict = value;
+}
+
+static void rna_ClothCollisionSettings_max_frict_set(struct PointerRNA *ptr, float value)
+{
+	ClothCollSettings *settings = (ClothCollSettings *)ptr->data;
+
+	/* check for clipping */
+	if (value < settings->friction)
+		value = settings->friction;
+
+	settings->max_frict = value;
+}
+
+static void rna_ClothCollisionSettings_frict_vgroup_get(PointerRNA *ptr, char *value)
+{
+	ClothCollSettings *settings = (ClothCollSettings *)ptr->data;
+	rna_object_vgroup_name_index_get(ptr, value, settings->vgroup_frict);
+}
+
+static int rna_ClothCollisionSettings_frict_vgroup_length(PointerRNA *ptr)
+{
+	ClothCollSettings *settings = (ClothCollSettings *)ptr->data;
+	return rna_object_vgroup_name_index_length(ptr, settings->vgroup_frict);
+}
+
+static void rna_ClothCollisionSettings_frict_vgroup_set(PointerRNA *ptr, const char *value)
+{
+	ClothCollSettings *settings = (ClothCollSettings *)ptr->data;
+	rna_object_vgroup_name_index_set(ptr, value, &settings->vgroup_frict);
+}
 #else
 
 static void rna_def_cloth_solver_result(BlenderRNA *brna)
@@ -687,7 +726,22 @@ static void rna_def_cloth_collision_settings(BlenderRNA *brna)
 
 	prop = RNA_def_property(srna, "friction", PROP_FLOAT, PROP_NONE);
 	RNA_def_property_range(prop, 0.0f, 80.0f);
+	RNA_def_property_float_funcs(prop, NULL, "rna_ClothCollisionSettings_friction_set", NULL);
 	RNA_def_property_ui_text(prop, "Friction", "Friction force if a collision happened (higher = less movement)");
+	RNA_def_property_update(prop, 0, "rna_cloth_update");
+
+	prop = RNA_def_property(srna, "friction_max", PROP_FLOAT, PROP_NONE);
+	RNA_def_property_float_sdna(prop, NULL, "max_frict");
+	RNA_def_property_range(prop, 0.0f, 80.0f);
+	RNA_def_property_float_funcs(prop, NULL, "rna_ClothCollisionSettings_max_frict_set", NULL);
+	RNA_def_property_ui_text(prop, "Friction Maximum", "Maximum friction value");
+	RNA_def_property_update(prop, 0, "rna_cloth_update");
+
+	prop = RNA_def_property(srna, "vertex_group_friction", PROP_STRING, PROP_NONE);
+	RNA_def_property_string_funcs(prop, "rna_ClothCollisionSettings_frict_vgroup_get",
+								  "rna_ClothCollisionSettings_frict_vgroup_length",
+	                              "rna_ClothCollisionSettings_frict_vgroup_set");
+	RNA_def_property_ui_text(prop, "Mass Vertex Group", "Vertex Group for pinning of vertices");
 	RNA_def_property_update(prop, 0, "rna_cloth_update");
 
 	prop = RNA_def_property(srna, "damping", PROP_FLOAT, PROP_FACTOR);

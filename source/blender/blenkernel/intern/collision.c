@@ -271,28 +271,51 @@ static int cloth_collision_response_static ( ClothModifierData *clmd, CollisionM
 		/* If v_n_mag < 0 the edges are approaching each other. */
 		if ( magrelVel > ALMOST_ZERO ) {
 			/* Calculate Impulse magnitude to stop all motion in normal direction. */
-			float magtangent = 0, repulse = 0, d = 0;
+			float magtangent = 0, repulse = 0, d = 0, frict_offset;
 			double impulse = 0.0;
-			float vrel_t_pre[3];
+			float vrel_t_pre[3], vrel_t_pre_norm[3];
 			float temp[3], spf;
 
 			/* calculate tangential velocity */
 			copy_v3_v3 ( temp, collpair->normal );
 			mul_v3_fl(temp, magrelVel);
 			sub_v3_v3v3(vrel_t_pre, relativeVelocity, temp);
+			normalize_v3_v3(vrel_t_pre_norm, vrel_t_pre);
+
+			frict_offset = cloth1->verts[collpair->ap1].frict_factor * fabsf(clmd->coll_parms->max_frict - clmd->coll_parms->friction);
 
 			/* Decrease in magnitude of relative tangential velocity due to coulomb friction
 			 * in original formula "magrelVel" should be the "change of relative velocity in normal direction" */
-			magtangent = min_ff(clmd->coll_parms->friction * 0.01f * magrelVel, len_v3(vrel_t_pre));
+			magtangent = min_ff((clmd->coll_parms->friction + frict_offset) * 0.01f * magrelVel, len_v3(vrel_t_pre));
 
 			/* Apply friction impulse. */
 			if ( magtangent > ALMOST_ZERO ) {
-				normalize_v3(vrel_t_pre);
-
 				impulse = magtangent / ( 1.0f + w1*w1 + w2*w2 + w3*w3 ); /* 2.0 * */
-				VECADDMUL ( i1, vrel_t_pre, w1 * impulse );
-				VECADDMUL ( i2, vrel_t_pre, w2 * impulse );
-				VECADDMUL ( i3, vrel_t_pre, w3 * impulse );
+				VECADDMUL ( i1, vrel_t_pre_norm, w1 * impulse );
+			}
+
+			frict_offset = cloth1->verts[collpair->ap2].frict_factor * fabsf(clmd->coll_parms->max_frict - clmd->coll_parms->friction);
+
+			/* Decrease in magnitude of relative tangential velocity due to coulomb friction
+			 * in original formula "magrelVel" should be the "change of relative velocity in normal direction" */
+			magtangent = min_ff((clmd->coll_parms->friction + frict_offset) * 0.01f * magrelVel, len_v3(vrel_t_pre));
+
+			/* Apply friction impulse. */
+			if ( magtangent > ALMOST_ZERO ) {
+				impulse = magtangent / ( 1.0f + w1*w1 + w2*w2 + w3*w3 ); /* 2.0 * */
+				VECADDMUL ( i2, vrel_t_pre_norm, w2 * impulse );
+			}
+
+			frict_offset = cloth1->verts[collpair->ap3].frict_factor * fabsf(clmd->coll_parms->max_frict - clmd->coll_parms->friction);
+
+			/* Decrease in magnitude of relative tangential velocity due to coulomb friction
+			 * in original formula "magrelVel" should be the "change of relative velocity in normal direction" */
+			magtangent = min_ff((clmd->coll_parms->friction + frict_offset) * 0.01f * magrelVel, len_v3(vrel_t_pre));
+
+			/* Apply friction impulse. */
+			if ( magtangent > ALMOST_ZERO ) {
+				impulse = magtangent / ( 1.0f + w1*w1 + w2*w2 + w3*w3 ); /* 2.0 * */
+				VECADDMUL ( i3, vrel_t_pre_norm, w3 * impulse );
 			}
 
 			/* Apply velocity stopping impulse

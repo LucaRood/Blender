@@ -109,6 +109,7 @@ typedef struct ClothCollSettings {
 	float	epsilon;		/* min distance for collisions.		*/
 	float	self_friction;		/* Fiction/damping with self contact. */
 	float	friction;		/* Friction/damping applied on contact with other object.*/
+	float   max_frict;  /* max friction scaling value, min is "friction" */
 	float	damping;	/* Collision restitution on contact with other object.*/
 	float 	selfepsilon; 		/* for selfcollision */
 	float repel_force, distance_repel;
@@ -116,9 +117,11 @@ typedef struct ClothCollSettings {
 	short	self_loop_count;	/* How many iterations for the selfcollision loop	*/
 	short	loop_count;		/* How many iterations for the collision loop.		*/
 	int pad;
+	char pad1[4];
 	struct Group *group;	/* Only use colliders from this group of objects */
 	short	vgroup_selfcol; /* vgroup to paint which vertices are used for self collisions */
-	short pad2[3];
+	short   vgroup_frict;   /* vertex group for scaling friction */
+	char pad2[4];
 } ClothCollSettings;
 
 

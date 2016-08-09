@@ -123,6 +123,7 @@ typedef struct ClothVertex {
 	float 	shear_stiff;
 	int 	spring_count; /* how many springs attached? */
 	float	shrink_factor; /* how much to shrink this cloth */
+	float   frict_factor; /* friction scaling value */
 }
 ClothVertex;
 
