@@ -221,19 +221,24 @@ static int cloth_collision_response_static ( ClothModifierData *clmd, CollisionM
 {
 	int result = 0;
 	Cloth *cloth1;
-	float w1, w2, w3, u1, u2, u3;
+	float u1, u2, u3;
+	float w[3];
 	float v1[3], v2[3], relativeVelocity[3];
 	float magrelVel;
 	float epsilon2 = BLI_bvhtree_get_epsilon ( collmd->bvhtree );
+	float frict_diff;
+	int i;
 
 	cloth1 = clmd->clothObject;
 
-	for ( ; collpair != collision_end; collpair++ ) {
-		float i1[3], i2[3], i3[3];
+	frict_diff = fabsf(clmd->coll_parms->max_frict - clmd->coll_parms->friction);
 
-		zero_v3(i1);
-		zero_v3(i2);
-		zero_v3(i3);
+	for ( ; collpair != collision_end; collpair++ ) {
+		float impuplses[3][3];
+
+		zero_v3(impuplses[0]);
+		zero_v3(impuplses[1]);
+		zero_v3(impuplses[2]);
 
 		/* only handle static collisions here */
 		if ( collpair->flag & COLLISION_IN_FUTURE )
@@ -244,7 +249,7 @@ static int cloth_collision_response_static ( ClothModifierData *clmd, CollisionM
 			cloth1->verts[collpair->ap1].txold,
 			cloth1->verts[collpair->ap2].txold,
 			cloth1->verts[collpair->ap3].txold,
-			&w1, &w2, &w3 );
+			&w[0], &w[1], &w[2] );
 
 		/* was: txold */
 		collision_compute_barycentric ( collpair->pb,
@@ -254,7 +259,7 @@ static int cloth_collision_response_static ( ClothModifierData *clmd, CollisionM
 			&u1, &u2, &u3 );
 
 		/* Calculate relative "velocity". */
-		collision_interpolateOnTriangle ( v1, cloth1->verts[collpair->ap1].tv, cloth1->verts[collpair->ap2].tv, cloth1->verts[collpair->ap3].tv, w1, w2, w3 );
+		collision_interpolateOnTriangle ( v1, cloth1->verts[collpair->ap1].tv, cloth1->verts[collpair->ap2].tv, cloth1->verts[collpair->ap3].tv, w[0], w[1], w[2] );
 
 		collision_interpolateOnTriangle ( v2, collmd->current_v[collpair->bp1].co, collmd->current_v[collpair->bp2].co, collmd->current_v[collpair->bp3].co, u1, u2, u3 );
 
@@ -271,65 +276,51 @@ static int cloth_collision_response_static ( ClothModifierData *clmd, CollisionM
 		/* If v_n_mag < 0 the edges are approaching each other. */
 		if ( magrelVel > ALMOST_ZERO ) {
 			/* Calculate Impulse magnitude to stop all motion in normal direction. */
-			float magtangent = 0, repulse = 0, d = 0, frict_offset;
+			float magtangent = 0, repulse = 0, d = 0;
 			double impulse = 0.0;
-			float vrel_t_pre[3], vrel_t_pre_norm[3];
+			float vrel_t_pre[3];
 			float temp[3], spf;
+			float frict_offset, vrel_t_pre_len;
+			float frict_factor[3];
+
+			frict_factor[0] = cloth1->verts[collpair->ap1].frict_factor;
+			frict_factor[1] = cloth1->verts[collpair->ap2].frict_factor;
+			frict_factor[2] = cloth1->verts[collpair->ap3].frict_factor;
 
 			/* calculate tangential velocity */
 			copy_v3_v3 ( temp, collpair->normal );
 			mul_v3_fl(temp, magrelVel);
 			sub_v3_v3v3(vrel_t_pre, relativeVelocity, temp);
-			normalize_v3_v3(vrel_t_pre_norm, vrel_t_pre);
 
-			frict_offset = cloth1->verts[collpair->ap1].frict_factor * fabsf(clmd->coll_parms->max_frict - clmd->coll_parms->friction);
+			vrel_t_pre_len = len_v3(vrel_t_pre);
+			normalize_v3(vrel_t_pre);
 
-			/* Decrease in magnitude of relative tangential velocity due to coulomb friction
-			 * in original formula "magrelVel" should be the "change of relative velocity in normal direction" */
-			magtangent = min_ff((clmd->coll_parms->friction + frict_offset) * 0.01f * magrelVel, len_v3(vrel_t_pre));
+			for (i = 0; i < 3; i++) {
+				frict_offset = frict_factor[i] * frict_diff;
 
-			/* Apply friction impulse. */
-			if ( magtangent > ALMOST_ZERO ) {
-				impulse = magtangent / ( 1.0f + w1*w1 + w2*w2 + w3*w3 ); /* 2.0 * */
-				VECADDMUL ( i1, vrel_t_pre_norm, w1 * impulse );
-			}
+				/* Decrease in magnitude of relative tangential velocity due to coulomb friction
+				 * in original formula "magrelVel" should be the "change of relative velocity in normal direction" */
+				magtangent = min_ff((clmd->coll_parms->friction + frict_offset) * 0.01f * magrelVel, vrel_t_pre_len);
 
-			frict_offset = cloth1->verts[collpair->ap2].frict_factor * fabsf(clmd->coll_parms->max_frict - clmd->coll_parms->friction);
-
-			/* Decrease in magnitude of relative tangential velocity due to coulomb friction
-			 * in original formula "magrelVel" should be the "change of relative velocity in normal direction" */
-			magtangent = min_ff((clmd->coll_parms->friction + frict_offset) * 0.01f * magrelVel, len_v3(vrel_t_pre));
-
-			/* Apply friction impulse. */
-			if ( magtangent > ALMOST_ZERO ) {
-				impulse = magtangent / ( 1.0f + w1*w1 + w2*w2 + w3*w3 ); /* 2.0 * */
-				VECADDMUL ( i2, vrel_t_pre_norm, w2 * impulse );
-			}
-
-			frict_offset = cloth1->verts[collpair->ap3].frict_factor * fabsf(clmd->coll_parms->max_frict - clmd->coll_parms->friction);
-
-			/* Decrease in magnitude of relative tangential velocity due to coulomb friction
-			 * in original formula "magrelVel" should be the "change of relative velocity in normal direction" */
-			magtangent = min_ff((clmd->coll_parms->friction + frict_offset) * 0.01f * magrelVel, len_v3(vrel_t_pre));
-
-			/* Apply friction impulse. */
-			if ( magtangent > ALMOST_ZERO ) {
-				impulse = magtangent / ( 1.0f + w1*w1 + w2*w2 + w3*w3 ); /* 2.0 * */
-				VECADDMUL ( i3, vrel_t_pre_norm, w3 * impulse );
+				/* Apply friction impulse. */
+				if ( magtangent > ALMOST_ZERO ) {
+					impulse = magtangent / ( 1.0f + w[0]*w[0] + w[1]*w[1] + w[2]*w[2] ); /* 2.0 * */
+					VECADDMUL ( impuplses[i], vrel_t_pre, w[i] * impulse );
+				}
 			}
 
 			/* Apply velocity stopping impulse
 			 * I_c = m * v_N / 2.0
 			 * no 2.0 * magrelVel normally, but looks nicer DG */
-			impulse =  magrelVel / ( 1.0 + w1*w1 + w2*w2 + w3*w3 );
+			impulse =  magrelVel / ( 1.0 + w[0]*w[0] + w[1]*w[1] + w[2]*w[2] );
 
-			VECADDMUL ( i1, collpair->normal, w1 * impulse );
+			VECADDMUL ( impuplses[0], collpair->normal, w[0] * impulse );
 			cloth1->verts[collpair->ap1].impulse_count++;
 
-			VECADDMUL ( i2, collpair->normal, w2 * impulse );
+			VECADDMUL ( impuplses[1], collpair->normal, w[1] * impulse );
 			cloth1->verts[collpair->ap2].impulse_count++;
 
-			VECADDMUL ( i3, collpair->normal, w3 * impulse );
+			VECADDMUL ( impuplses[2], collpair->normal, w[2] * impulse );
 			cloth1->verts[collpair->ap3].impulse_count++;
 
 			/* Apply repulse impulse if distance too short
@@ -349,10 +340,10 @@ static int cloth_collision_response_static ( ClothModifierData *clmd, CollisionM
 					repulse = min_ff( repulse, 5.0*impulse );
 				repulse = max_ff(impulse, repulse);
 
-				impulse = repulse / ( 1.0f + w1*w1 + w2*w2 + w3*w3 ); /* original 2.0 / 0.25 */
-				VECADDMUL ( i1, collpair->normal,  impulse );
-				VECADDMUL ( i2, collpair->normal,  impulse );
-				VECADDMUL ( i3, collpair->normal,  impulse );
+				impulse = repulse / ( 1.0f + w[0]*w[0] + w[1]*w[1] + w[2]*w[2] ); /* original 2.0 / 0.25 */
+				VECADDMUL ( impuplses[0], collpair->normal,  impulse );
+				VECADDMUL ( impuplses[1], collpair->normal,  impulse );
+				VECADDMUL ( impuplses[2], collpair->normal,  impulse );
 			}
 
 			result = 1;
@@ -370,11 +361,11 @@ static int cloth_collision_response_static ( ClothModifierData *clmd, CollisionM
 				/* stay on the safe side and clamp repulse */
 				float repulse = d*1.0f/spf;
 
-				float impulse = repulse / ( 3.0f * ( 1.0f + w1*w1 + w2*w2 + w3*w3 )); /* original 2.0 / 0.25 */
+				float impulse = repulse / ( 3.0f * ( 1.0f + w[0]*w[0] + w[1]*w[1] + w[2]*w[2] )); /* original 2.0 / 0.25 */
 
-				VECADDMUL ( i1, collpair->normal,  impulse );
-				VECADDMUL ( i2, collpair->normal,  impulse );
-				VECADDMUL ( i3, collpair->normal,  impulse );
+				VECADDMUL ( impuplses[0], collpair->normal,  impulse );
+				VECADDMUL ( impuplses[1], collpair->normal,  impulse );
+				VECADDMUL ( impuplses[2], collpair->normal,  impulse );
 
 				cloth1->verts[collpair->ap1].impulse_count++;
 				cloth1->verts[collpair->ap2].impulse_count++;
@@ -385,17 +376,15 @@ static int cloth_collision_response_static ( ClothModifierData *clmd, CollisionM
 		}
 
 		if (result) {
-			int i = 0;
-
 			for (i = 0; i < 3; i++) {
-				if (cloth1->verts[collpair->ap1].impulse_count > 0 && ABS(cloth1->verts[collpair->ap1].impulse[i]) < ABS(i1[i]))
-					cloth1->verts[collpair->ap1].impulse[i] = i1[i];
+				if (cloth1->verts[collpair->ap1].impulse_count > 0 && ABS(cloth1->verts[collpair->ap1].impulse[i]) < ABS(impuplses[0][i]))
+					cloth1->verts[collpair->ap1].impulse[i] = impuplses[0][i];
 
-				if (cloth1->verts[collpair->ap2].impulse_count > 0 && ABS(cloth1->verts[collpair->ap2].impulse[i]) < ABS(i2[i]))
-					cloth1->verts[collpair->ap2].impulse[i] = i2[i];
+				if (cloth1->verts[collpair->ap2].impulse_count > 0 && ABS(cloth1->verts[collpair->ap2].impulse[i]) < ABS(impuplses[1][i]))
+					cloth1->verts[collpair->ap2].impulse[i] = impuplses[1][i];
 
-				if (cloth1->verts[collpair->ap3].impulse_count > 0 && ABS(cloth1->verts[collpair->ap3].impulse[i]) < ABS(i3[i]))
-					cloth1->verts[collpair->ap3].impulse[i] = i3[i];
+				if (cloth1->verts[collpair->ap3].impulse_count > 0 && ABS(cloth1->verts[collpair->ap3].impulse[i]) < ABS(impuplses[2][i]))
+					cloth1->verts[collpair->ap3].impulse[i] = impuplses[2][i];
 			}
 		}
 	}
