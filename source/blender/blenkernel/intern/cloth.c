@@ -657,14 +657,13 @@ static void cloth_to_object (Object *ob,  ClothModifierData *clmd, float (*verte
 
 int cloth_uses_vgroup(ClothModifierData *clmd)
 {
-	return ((((clmd->sim_parms->flags & CLOTH_SIMSETTINGS_FLAG_SCALING ) ||
-		(clmd->sim_parms->flags & CLOTH_SIMSETTINGS_FLAG_SEW) ||
+	return ((((clmd->sim_parms->flags & CLOTH_SIMSETTINGS_FLAG_SEW) ||
 		(clmd->coll_parms->flags & CLOTH_COLLSETTINGS_FLAG_SELF)) && 
-		((clmd->sim_parms->vgroup_struct>0)||
-		(clmd->sim_parms->vgroup_bend>0)  ||
-		(clmd->sim_parms->vgroup_shrink>0) ||
+		((clmd->sim_parms->vgroup_shrink>0) ||
 		(clmd->coll_parms->vgroup_selfcol>0))) ||
-		(clmd->sim_parms->vgroup_mass>0));
+		((clmd->sim_parms->vgroup_mass>0) ||
+		(clmd->sim_parms->vgroup_struct>0) ||
+		(clmd->sim_parms->vgroup_bend>0)));
 }
 
 /**
@@ -721,16 +720,14 @@ static void cloth_apply_vgroup ( ClothModifierData *clmd, DerivedMesh *dm )
 						if ( verts->goal >= SOFTGOALSNAP )
 							verts->flags |= CLOTH_VERT_FLAG_PINNED;
 					}
-					
-					if (clmd->sim_parms->flags & CLOTH_SIMSETTINGS_FLAG_SCALING ) {
-						if ( dvert->dw[j].def_nr == (clmd->sim_parms->vgroup_struct-1)) {
-							verts->struct_stiff = dvert->dw [j].weight;
-							verts->shear_stiff = dvert->dw [j].weight;
-						}
-						
-						if ( dvert->dw[j].def_nr == (clmd->sim_parms->vgroup_bend-1)) {
-							verts->bend_stiff = dvert->dw [j].weight;
-						}
+
+					if ( dvert->dw[j].def_nr == (clmd->sim_parms->vgroup_struct-1)) {
+						verts->struct_stiff = dvert->dw [j].weight;
+						verts->shear_stiff = dvert->dw [j].weight;
+					}
+
+					if ( dvert->dw[j].def_nr == (clmd->sim_parms->vgroup_bend-1)) {
+						verts->bend_stiff = dvert->dw [j].weight;
 					}
 
 					if (clmd->coll_parms->flags & CLOTH_COLLSETTINGS_FLAG_SELF ) {
