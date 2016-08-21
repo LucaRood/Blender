@@ -179,8 +179,14 @@ class PHYSICS_PT_cloth_collision(PhysicButtonsPanel, Panel):
 
         layout.prop(cloth, "group")
 
-        layout.prop_search(cloth, "vertex_group_friction", ob, "vertex_groups", text="")
-        layout.prop(cloth, "friction_max")
+        row = layout.row(align=True)
+
+        row.label("Friction scaling:")
+        row.prop_search(cloth, "vertex_group_friction", ob, "vertex_groups", text="")
+
+        sub = row.row(align=True)
+        sub.active = cloth.vertex_group_friction != ""
+        sub.prop(cloth, "friction_max", text="Max")
 
 
 class PHYSICS_PT_cloth_stiffness(PhysicButtonsPanel, Panel):
