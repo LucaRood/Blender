@@ -129,6 +129,28 @@ static void rna_ClothSettings_max_sewing_set(struct PointerRNA *ptr, float value
 	settings->max_sewing = value;
 }
 
+static void rna_ClothSettings_min_shrink_set(struct PointerRNA *ptr, float value)
+{
+	ClothSimSettings *settings = (ClothSimSettings *)ptr->data;
+
+	settings->shrink_min = value;
+
+	/* check for max clipping */
+	if (value > settings->shrink_max)
+		settings->shrink_max = value;
+}
+
+static void rna_ClothSettings_max_shrink_set(struct PointerRNA *ptr, float value)
+{
+	ClothSimSettings *settings = (ClothSimSettings *)ptr->data;
+
+	/* check for clipping */
+	if (value < settings->shrink_min)
+		value = settings->shrink_min;
+
+	settings->shrink_max = value;
+}
+
 static void rna_ClothSettings_mass_vgroup_get(PointerRNA *ptr, char *value)
 {
 	ClothSimSettings *sim = (ClothSimSettings *)ptr->data;
@@ -479,12 +501,14 @@ static void rna_def_cloth_sim_settings(BlenderRNA *brna)
 	prop = RNA_def_property(srna, "shrink_min", PROP_FLOAT, PROP_NONE);
 	RNA_def_property_float_sdna(prop, NULL, "shrink_min");
 	RNA_def_property_range(prop, 0.0f, 1.0f);
+	RNA_def_property_float_funcs(prop, NULL, "rna_ClothSettings_min_shrink_set", NULL);
 	RNA_def_property_ui_text(prop, "Shrink Factor Min", "Min amount to shrink cloth by");
 	RNA_def_property_update(prop, 0, "rna_cloth_update");
 
 	prop = RNA_def_property(srna, "shrink_max", PROP_FLOAT, PROP_NONE);
 	RNA_def_property_float_sdna(prop, NULL, "shrink_max");
 	RNA_def_property_range(prop, 0.0f, 1.0f);
+	RNA_def_property_float_funcs(prop, NULL, "rna_ClothSettings_max_shrink_set", NULL);
 	RNA_def_property_ui_text(prop, "Shrink Factor Max", "Max amount to shrink cloth by");
 	RNA_def_property_update(prop, 0, "rna_cloth_update");
 
