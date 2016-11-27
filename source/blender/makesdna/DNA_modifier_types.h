@@ -86,6 +86,7 @@ typedef enum ModifierType {
 	eModifierType_NormalEdit        = 50,
 	eModifierType_CorrectiveSmooth  = 51,
 	eModifierType_MeshSequenceCache = 52,
+	eModifierType_SurfaceDeform     = 53,
 	NUM_MODIFIER_TYPES
 } ModifierType;
 
@@ -1568,6 +1569,40 @@ enum {
 	MOD_MESHSEQ_READ_POLY  = (1 << 1),
 	MOD_MESHSEQ_READ_UV    = (1 << 2),
 	MOD_MESHSEQ_READ_COLOR = (1 << 3),
+};
+
+typedef struct SDefVert {
+	/* TODO: verts should probably store absolute MVert indices for both modes. */
+    int verts[3]; /* MVert index[3] for MOD_SDEF_MODE_LOOPTRI | MLoop index[2] for MOD_SDEF_MODE_CENTROID (offset by loopstart) */
+    int poly_index;
+    int mode;
+    float bary_coords[3];
+    float *mean_val_coords;
+    float normal_dist;
+    char pad[4];
+} SDefVert;
+
+typedef struct SurfaceDeformModifierData {
+    ModifierData modifier;
+
+	struct Object *target;	/* bind target object */
+	SDefVert *verts;		/* vertex bind data */
+	int numverts, numpoly, numtris;
+	int flags;
+} SurfaceDeformModifierData;
+
+/* Surface Deform modifier flags */
+enum {
+	MOD_SDEF_BIND = (1 << 0),
+	MOD_SDEF_USES_LOOPTRI = (1 << 1),
+	MOD_SDEF_HAS_CONCAVE = (1 << 2),
+};
+
+/* Surface Deform vertex bind modes */
+enum {
+	MOD_SDEF_MODE_LOOPTRI = 0,
+	MOD_SDEF_MODE_NGON    = 1,
+	MOD_SDEF_MODE_CENTROID  = 2,
 };
 
 #define MOD_MESHSEQ_READ_ALL \
