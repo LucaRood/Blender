@@ -1572,12 +1572,10 @@ enum {
 };
 
 typedef struct SDefVert {
-	/* TODO: verts should probably store absolute MVert indices for both modes. */
-    int verts[3]; /* MVert index[3] for MOD_SDEF_MODE_LOOPTRI | MLoop index[2] for MOD_SDEF_MODE_CENTROID (offset by loopstart) */
-    int poly_index;
+    int *vert_inds;
+    int numverts;
     int mode;
-    float bary_coords[3];
-    float *mean_val_coords;
+    float *vert_weights;
     float normal_dist;
     char pad[4];
 } SDefVert;
@@ -1587,8 +1585,9 @@ typedef struct SurfaceDeformModifierData {
 
 	struct Object *target;	/* bind target object */
 	SDefVert *verts;		/* vertex bind data */
-	int numverts, numpoly, numtris;
+	int numverts, numpoly;
 	int flags;
+	char pad[4];
 } SurfaceDeformModifierData;
 
 /* Surface Deform modifier flags */
