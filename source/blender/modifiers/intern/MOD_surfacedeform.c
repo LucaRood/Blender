@@ -155,7 +155,6 @@ static void meanValueCoordinates(float w[], const float point[3], const float ve
 	
 	for (i = 0; i < num; i++) {
 		w[i] /= tot_w;
-		printf("Weight: %.6f\n", w[i]);
 	}
 }
 
@@ -200,11 +199,8 @@ static void bindVert(void *userdata, void *userdata_chunk, const int i, const in
 	copy_v3_v3(v1, mvert[mloop[looptri->tri[0]].v].co);
 	copy_v3_v3(v2, mvert[mloop[looptri->tri[1]].v].co);
 	copy_v3_v3(v3, mvert[mloop[looptri->tri[2]].v].co);
-	
-	printf("\nIndex: %i\n", i);
 
 	if (!is_poly_convex_v3(coords, mpoly->totloop)) {
-		printf("Looptri bind!\n");
 		vert->mode = MOD_SDEF_MODE_LOOPTRI;
 	
 		cent_tri_v3(co, v1, v2, v3);
@@ -237,7 +233,6 @@ static void bindVert(void *userdata, void *userdata_chunk, const int i, const in
 		}
 		
 		if (isect_point_tri_prism_v3(proj_vert_co, proj_v1, proj_v2, proj_v3)) {
-			printf("Ngon bind!\n");
 			vert->mode = MOD_SDEF_MODE_NGON;
 			
 			vert->mean_val_coords = MEM_mallocN(sizeof(*vert->mean_val_coords) * mpoly->totloop, "SDefMeanValCoords");
@@ -251,7 +246,6 @@ static void bindVert(void *userdata, void *userdata_chunk, const int i, const in
 			}
 		}
 		else {
-			printf("Centroid bind!\n");
 			float centroid[3];
 			vert->mode = MOD_SDEF_MODE_CENTROID;
 			
@@ -271,7 +265,7 @@ static void bindVert(void *userdata, void *userdata_chunk, const int i, const in
 	
 	vert->normal_dist = len_v3v3(vert_co, proj_vert_co);
 	
-	sub_v3_v3v3(co, vert_co, co);
+	sub_v3_v3v3(co, vert_co, proj_vert_co);
 	
 	if (dot_v3v3(co, norm) < 0)
 		vert->normal_dist *= -1;
@@ -400,7 +394,7 @@ static void surfacedeformModifier_do(
 	
 	/* TODO: Normal offset can be calculated outside of conditional (for all modes at once) */
 	for (i = 0; i < numVerts; i++, sdvert++) {
-		if (sdvert->mode & MOD_SDEF_MODE_LOOPTRI) {
+		if (sdvert->mode == MOD_SDEF_MODE_LOOPTRI) {
 			copy_v3_v3(v1, mvert[sdvert->verts[0]].co);
 			copy_v3_v3(v2, mvert[sdvert->verts[1]].co);
 			copy_v3_v3(v3, mvert[sdvert->verts[2]].co);
@@ -408,8 +402,6 @@ static void surfacedeformModifier_do(
 			cent_tri_v3(co, v1, v2, v3);
 			normal_tri_v3(norm, v1, v2, v3);
 			
-			
-			/* TODO: Replace with cent_tri_v3 */
 			zero_v3(vertexCos[i]);
 			madd_v3_v3fl(vertexCos[i], v1, sdvert->bary_coords[0]);
 			madd_v3_v3fl(vertexCos[i], v2, sdvert->bary_coords[1]);
@@ -426,7 +418,7 @@ static void surfacedeformModifier_do(
 				copy_v3_v3(coords[j], mvert[loop->v].co);
 			}
 			
-			if (sdvert->mode & MOD_SDEF_MODE_NGON) {
+			if (sdvert->mode == MOD_SDEF_MODE_NGON) {
 				zero_v3(vertexCos[i]);
 				
 				for (j = 0; j < poly.totloop; j++) {
@@ -439,7 +431,7 @@ static void surfacedeformModifier_do(
 				
 				madd_v3_v3fl(vertexCos[i], norm, sdvert->normal_dist);
 			}
-			else if (sdvert->mode & MOD_SDEF_MODE_CENTROID) {
+			else if (sdvert->mode == MOD_SDEF_MODE_CENTROID) {
 				float cent[3];
 				cent_poly_v3(cent, coords, poly.totloop);
 				
@@ -447,6 +439,8 @@ static void surfacedeformModifier_do(
 				
 				copy_v3_v3(v1, mvert[loop[sdvert->verts[0]].v].co);
 				copy_v3_v3(v2, mvert[loop[sdvert->verts[1]].v].co);
+				
+				normal_tri_v3(norm, v1, v2, cent);
 				
 				zero_v3(vertexCos[i]);
 				madd_v3_v3fl(vertexCos[i], v1, sdvert->bary_coords[0]);
