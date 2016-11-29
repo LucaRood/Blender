@@ -1836,13 +1836,15 @@ static void write_modifiers(WriteData *wd, ListBase *modbase)
 
 			writestruct(wd, DATA, SDefVert, smd->numverts, smd->verts);
 
-			for (i = 0; i < smd->numverts; i++) {
-				writedata(wd, DATA, sizeof(int) * smd->verts[i].numverts, smd->verts[i].vert_inds);
+			if (smd->verts) {
+				for (i = 0; i < smd->numverts; i++) {
+					writedata(wd, DATA, sizeof(int) * smd->verts[i].numverts, smd->verts[i].vert_inds);
 
-				if (smd->verts[i].mode == MOD_SDEF_MODE_CENTROID)
-					writedata(wd, DATA, sizeof(float) * 3, smd->verts[i].vert_weights);
-				else
-					writedata(wd, DATA, sizeof(float) * smd->verts[i].numverts, smd->verts[i].vert_weights);
+					if (smd->verts[i].mode == MOD_SDEF_MODE_CENTROID)
+						writedata(wd, DATA, sizeof(float) * 3, smd->verts[i].vert_weights);
+					else
+						writedata(wd, DATA, sizeof(float) * smd->verts[i].numverts, smd->verts[i].vert_weights);
+				}
 			}
 		}
 	}
