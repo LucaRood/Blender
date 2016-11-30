@@ -1135,10 +1135,9 @@ static int rna_CorrectiveSmoothModifier_is_bind_get(PointerRNA *ptr)
 	return (csmd->bind_coords != NULL);
 }
 
-/* TODO: Check if bind data is allocated */
 static int rna_SurfaceDeformModifier_is_bound_get(PointerRNA *ptr)
 {
-	return (((SurfaceDeformModifierData *)ptr->data)->flags & MOD_SDEF_BIND);
+	return (((SurfaceDeformModifierData *)ptr->data)->verts != NULL);
 }
 
 static void rna_MeshSequenceCache_object_path_update(Main *bmain, Scene *scene, PointerRNA *ptr)
